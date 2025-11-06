@@ -17,7 +17,7 @@ dotnet restore
 
 ### 3. Build the Project
 
-dotnet build
+dotnet build --no-restore
 
 ### 4. Run the Application
 
