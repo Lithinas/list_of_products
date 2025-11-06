@@ -1,0 +1,112 @@
+﻿@page "/Products"
+@rendermode InteractiveServer
+@inject HttpClient Http
+
+@if (ArticleList != null && ArticleList.Count > 0)
+{
+    <div class="top-bar">
+        <button class="btn" @onclick="ToggleView">@ViewLabel</button>
+        <button class="btn" @onclick="ToggleSort">Sort: @SortLabel</button>
+        <button class="btn" @onclick="ToggleFilter">@(FilterForTwoEurosPerLitreOrUnder ? "Show All" : "≤ 2€/L")</button>
+    </div>
+}
+
+@if (isLoading)
+{
+    <p>Loading...</p>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="error-message">
+        <p><strong>Error loading products:</strong></p>
+        <p>@errorMessage</p>
+        <button class="btn" @onclick="RetryLoad">Retry</button>
+    </div>
+}
+else if (ArticleList != null)
+{
+    <div class="@ContainerClass">
+        @foreach (var p in ArticleList)
+        {
+            if (IsDetailView)
+            {
+                <div class="product-card">
+                    <img src="@p.Image" alt="@p.ShortDescription" />
+                    <div class="info">
+                        <h4>@p.ProductName</h4>
+                        <p>@p.Price.ToString("0.00") €</p>
+                        <p>@p.ShortDescription</p>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <img class="bottle-only" src="@p.Image" alt="@p.ProductName" />
+            }
+        }
+    </div>
+}
+
+@code {
+    private List<ProductArticleViewModel>? ArticleList;
+    private bool IsDetailView = true;
+    private string SortOrder = "asc";
+    private bool FilterForTwoEurosPerLitreOrUnder = false;
+    private bool isLoading = true;
+    private string? errorMessage = null;
+
+    private string ViewLabel => IsDetailView ? "Bottle view" : "Detail view";
+    private string SortLabel => SortOrder == "asc" ? "↓" : "↑";
+    private string ContainerClass => IsDetailView ? "detail-view" : "bottle-view";
+
+    protected override async Task OnInitializedAsync() => await LoadProducts();
+
+    private async Task LoadProducts()
+    {
+        isLoading = true;
+        errorMessage = null;
+        ArticleList = null;
+
+        try
+        {
+            var url = $"api/products?filterForTwoEurosPerLitreOrUnder={FilterForTwoEurosPerLitreOrUnder}&sortOrder={SortOrder}";
+            ArticleList = await Http.GetFromJsonAsync<List<ProductArticleViewModel>>(url);
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Unable to connect to the server. Please check your network connection. ({ex.Message})";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An unexpected error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RetryLoad()
+    {
+        await LoadProducts();
+    }
+
+    private void ToggleView()
+    {
+        IsDetailView = !IsDetailView;
+        StateHasChanged();
+    }
+
+    private async Task ToggleSort()
+    {
+        SortOrder = SortOrder == "asc" ? "desc" : "asc";
+        await LoadProducts();
+    }
+
+    private async Task ToggleFilter()
+    {
+        FilterForTwoEurosPerLitreOrUnder = !FilterForTwoEurosPerLitreOrUnder;
+        await LoadProducts();
+    }
+}
