@@ -7,6 +7,10 @@
 git clone <https://github.com/Lithinas/list_of_products>
 cd list_of_products
 
+### 2. Trust development certificate (optional if not done already)
+
+dotnet dev-certs https --trust
+
 ### 2. Restore Dependencies
 
 dotnet restore
